@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>スクショ黒塗りツール v1.0</title>
+<link rel="stylesheet" href="style.css?v=10000">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <link rel="icon" type="image/png" href="./favicon.png">
+  <link rel="icon" href="./favicon.ico">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+</head>
+<body>
+<main class="container">
+<div class="app-title-row">
+  <h1>スクショ黒塗りツール</h1>
+  <button id="appHelpBtn" class="app-help-button" type="button" aria-label="このアプリの使い方" aria-haspopup="dialog" aria-controls="appHelpDialog">?</button>
+</div>
+<p class="description quick-guide"><strong>① 画像を選ぶ</strong><span>② 隠したい名前を入力</span><span>③「自動検出」を押す</span></p>
+
+<section class="panel">
+<label for="fileInput">スクリーンショット</label>
+<input id="fileInput" type="file" accept="image/*">
+
+<label for="targetText">黒塗りする文字</label>
+<input id="targetText" type="text" placeholder="例：ゆーざー" autocomplete="off">
+<div id="targetHistory" class="target-history" hidden></div>
+
+<div class="button-row main-actions">
+<button id="redactBtn" type="button" disabled>✨ 自動検出</button>
+<button id="manualBtn" type="button" disabled>🖊 手動</button>
+<button id="undoBtn" type="button" disabled>↩️ 戻す</button>
+<button id="resetBtn" class="secondary reset-button" type="button" disabled>🗑</button>
+</div>
+
+<div class="button-row-left diagnostic-row">
+<button id="diagnoseBtn" type="button" disabled>OCR診断</button>
+</div>
+
+<button id="manualDoneBtn" class="secondary" type="button" hidden>手動黒塗り終了</button>
+
+<label id="stampModeWrap" class="checkbox standalone-stamp" hidden>
+  <input id="stampMode" type="checkbox" disabled>
+  スタンプモード
+</label>
+
+<details class="option-panel">
+  <summary>オプション</summary>
+  <div class="option-panel-body">
+    <div class="manual-draw-setting option-item">
+      <label for="manualDrawMode">手動の描画方法</label>
+      <div class="manual-draw-controls">
+        <select id="manualDrawMode">
+          <option value="trace" selected>なぞり式（高さ固定）</option>
+          <option value="free">自由矩形</option>
+        </select>
+        <button id="manualHelpBtn" class="help-button" type="button" aria-label="手動モードの使い方" aria-haspopup="dialog" aria-controls="manualHelpDialog">?</button>
+      </div>
+    </div>
+
+    <div class="option-item">
+      <label for="redactionMode">隠し方</label>
+      <div class="redaction-style-controls">
+        <select id="redactionMode">
+          <option value="black">黒塗り</option>
+          <option value="bg">背景色</option>
+          <option value="blur">ぼかし</option>
+          <option value="color">任意の色</option>
+        </select>
+        <input id="redactionColor" type="color" value="#1a1a1a" aria-label="任意の色">
+      </div>
+    </div>
+
+  </div>
+</details>
+
+<div id="appHelpDialog" class="help-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="appHelpTitle">
+  <div class="help-dialog-backdrop" data-app-help-close></div>
+  <div class="help-dialog-card app-help-card" role="document">
+    <div class="help-dialog-header">
+      <h2 id="appHelpTitle">使い方・ヘルプ</h2>
+      <button id="appHelpCloseBtn" class="help-dialog-close" type="button" aria-label="説明を閉じる">×</button>
+    </div>
+    <div class="help-dialog-body app-help-body">
+      <section class="help-section">
+        <h3>基本の使い方</h3>
+        <p>① 画像を選ぶ<br>② 隠したい名前を入力する<br>③「自動検出」を押す</p>
+        <p>検出後は、必要に応じて手動で追加・修正できます。最後に「画像を保存」を押してください。</p>
+      </section>
+
+      <section class="help-section">
+        <h3>隠し方の違い</h3>
+        <p><strong>黒塗り：</strong>文字の上を黒く塗りつぶします。</p>
+        <p><strong>背景色：</strong>周囲の背景色に近い色で文字を隠します。</p>
+        <p><strong>ぼかし：</strong>文字が読めない程度まで強くぼかします。</p>
+        <p><strong>任意の色：</strong>好きな色を選んで文字を隠します。</p>
+      </section>
+
+      <section class="help-section">
+        <h3>手動編集</h3>
+        <p><strong>なぞり式：</strong>指でなぞった位置に、一定の高さで隠し範囲を追加します。</p>
+        <p><strong>スタンプ：</strong>タップした位置に、直前に作った手動の隠し範囲と同じサイズで追加します。</p>
+        <p>既存の範囲をタップすると選択でき、移動・リサイズできます。「×」で削除、「戻す」で直前の操作を取り消せます。</p>
+        <p>画像の移動・拡大縮小は2本指で操作できます。</p>
+      </section>
+
+      <section class="help-section">
+        <h3>うまくいかないとき</h3>
+        <p>名前は画像に表示されている文字と同じ表記で入力してください。</p>
+        <p>自動検出で見つからない部分は手動で追加できます。余計な場所まで隠れた場合は、その範囲を選択して「×」で削除できます。</p>
+        <p>小さい文字や特殊な字体、背景との区別がつきにくい文字は、自動検出しにくい場合があります。</p>
+      </section>
+
+      <section class="help-section help-contact">
+        <h3>不具合・検出について</h3>
+        <p>自動検出は、文字の大きさ・字体・背景・画質などによって正しく検出できない場合があります。すべての名前を100%検出できるものではありません。</p>
+        <p>動かない、表示がおかしいなどの不具合や、特定の画像で明らかに検出しにくい場合は、問題が起きたスクリーンショットを添えて、X（旧Twitter）<a href="https://x.com/SRotofuuu" target="_blank" rel="noopener noreferrer">@SRotofuuu</a> までご連絡ください。</p>
+        <p>名前や文字だけでは原因を確認できないため、可能な範囲で実際に使用した画像を添えていただけると助かります。</p>
+        <p class="help-note">※個人情報や見せたくない部分は隠してからお送りください。</p>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div id="manualHelpDialog" class="help-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="manualHelpTitle">
+  <div class="help-dialog-backdrop" data-help-close></div>
+  <div class="help-dialog-card" role="document">
+    <div class="help-dialog-header">
+      <h2 id="manualHelpTitle">手動モードの使い方</h2>
+      <button id="manualHelpCloseBtn" class="help-dialog-close" type="button" aria-label="説明を閉じる">×</button>
+    </div>
+    <div class="help-dialog-body">
+      <p><strong>なぞり式</strong>：文字の上を横になぞると、高さ固定の黒塗りを作れます。</p>
+      <p><strong>自由矩形</strong>：指で囲んだ範囲を自由な大きさで黒塗りします。</p>
+      <p><strong>スタンプモード</strong>：直前に作った手動の隠し範囲と同じサイズを、画像をタップして追加できます。</p>
+      <p><strong>既存の黒塗り</strong>：タップして選択し、中央をドラッグで移動、四隅をドラッグでサイズ変更できます。</p>
+      <p><strong>削除</strong>：選択した黒塗りの左上に出る「×」を押します。</p>
+      <p><strong>画像の移動・拡大縮小</strong>：2本指で移動、ピンチで拡大縮小できます。</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<pre id="status" class="status">画像を選択してください。</pre>
+
+<section class="canvas-panel">
+<div id="canvasWrap">
+<canvas id="canvas"></canvas>
+<div id="selection" hidden></div>
+<button id="manualDeleteBtn" class="manual-delete-btn" type="button" hidden aria-label="この黒塗りを削除">×</button>
+<div id="ocrDebugLayer" hidden></div>
+</div>
+<div class="zoom-controls">
+<button id="zoomOutBtn" type="button">－</button>
+<span id="zoomLabel">100%</span>
+<button id="zoomInBtn" type="button">＋</button>
+</div>
+</section>
+
+<section class="actions">
+<button id="saveBtn" type="button" disabled>画像を保存</button>
+</section>
+
+<pre id="errorDetails" class="error" hidden></pre>
+<pre id="ocrDiagnostics" class="diagnostics" hidden></pre>
+</main>
+<script type="module" src="app.js?v=10000"></script>
+</body>
+</html>
