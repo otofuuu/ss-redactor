@@ -1,5 +1,5 @@
 // 共有設定値。機能ファイル側にマジックナンバーを散らさない。
-export const ENABLE_DIAGNOSTIC = true;
+export const ENABLE_DIAGNOSTIC = false;
 
 export const CONFIG = Object.freeze({
   bbox: Object.freeze({
